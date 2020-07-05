@@ -1,0 +1,6 @@
+framework module Pods_Song_inSync {
+  umbrella header "Pods-Song inSync-umbrella.h"
+
+  export *
+  module * { export * }
+}
