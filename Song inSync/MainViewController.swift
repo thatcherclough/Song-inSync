@@ -13,7 +13,7 @@ import UserNotifications
 class MainViewController: UIViewController {
     
     var hasPermissions: Bool! = false
-    static var canPushNotifications: Bool!
+    static var canPushNotifications: Bool! = true
     
     @IBOutlet weak var hostButtonOutlet: UIButton!
     @IBOutlet weak var joinButtonOutlet: UIButton!
