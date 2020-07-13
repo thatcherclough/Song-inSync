@@ -124,8 +124,6 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
         DispatchQueue.main.async {
             let dataAsString = String(data: data, encoding: .utf8)!
             
-            let player = MPMusicPlayerController.applicationQueuePlayer
-            
             let songName = dataAsString.slice(from: "song name:", to: "\n")!
             let artistName = dataAsString.slice(from: "artist name:", to: "\n")!
             let songAndArtist = songName + " " + artistName
@@ -135,30 +133,30 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
             let songIsPlaying = Bool(dataAsString.slice(from: "playing:", to: "\n")!)!
             let hostTimeInMillis = Double(dataAsString.slice(from: "current time:", to: "\n")!)!
             
-            let hostSongPositionForCheckInSec = ((songPositionInMillis + ((NSDate().timeIntervalSince1970 * 1000) - hostTimeInMillis)) / 1000).rounded(toPlaces: 2)
-            let currentSongPositionInSec = player.currentPlaybackTime.rounded(toPlaces: 2)
+            let player = MPMusicPlayerController.applicationQueuePlayer
             
-            if !self.currentSongAndArtist.isEmpty && (self.currentSongAndArtist == songAndArtist) && (abs(hostSongPositionForCheckInSec - currentSongPositionInSec) < 0.035) {
+            let currentSongPositionInSec = player.currentPlaybackTime
+            let hostSongPositionForCheckInSec = (songPositionInMillis / 1000) + (NSDate().timeIntervalSince1970 - (hostTimeInMillis / 1000))
+            
+            if !self.currentSongAndArtist.isEmpty && (self.currentSongAndArtist == songAndArtist) && (abs(hostSongPositionForCheckInSec - currentSongPositionInSec) < 0.025) {
                 print("Everything is on track")
             } else if (!self.currentSongAndArtist.isEmpty) && (self.currentSongAndArtist == songAndArtist) {
                 print("Song is the same, but something else has changed")
                 self.currentSongIsPlaying = songIsPlaying
-                player.prepareToPlay()
                 
                 if self.currentSongIsPlaying {
+                    player.prepareToPlay()
                     player.play()
                     while player.playbackState != .playing {
                         player.play()
                     }
+                    
+                    let inSyncSongPositionInSec = (songPositionInMillis / 1000) + (NSDate().timeIntervalSince1970 - (hostTimeInMillis / 1000) + 1)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        player.currentPlaybackTime = inSyncSongPositionInSec + self.playingDelay
+                    }
                 } else {
                     player.pause()
-                }
-                
-                let currentTimeInMillis = (NSDate().timeIntervalSince1970 * 1000)
-                let inSyncSongPositionInSec = (songPositionInMillis + (currentTimeInMillis - hostTimeInMillis + 1000)) / 1000
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    player.currentPlaybackTime = inSyncSongPositionInSec + self.playingDelay
                 }
             } else {
                 print("Song has changed")
@@ -170,22 +168,20 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
                         let id: [String] = [id]
                         let queue  = MPMusicPlayerStoreQueueDescriptor(storeIDs: id)
                         player.setQueue(with: queue)
-                        player.prepareToPlay()
                         
                         if self.currentSongIsPlaying {
+                            player.prepareToPlay()
                             player.play()
                             while player.playbackState != .playing {
                                 player.play()
                             }
+                            
+                            let inSyncSongPositionInSec = (songPositionInMillis / 1000) + (NSDate().timeIntervalSince1970 - (hostTimeInMillis / 1000) + 1)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                player.currentPlaybackTime = inSyncSongPositionInSec + self.playingDelay
+                            }
                         } else {
                             player.pause()
-                        }
-                        
-                        let currentTimeInMillis = (NSDate().timeIntervalSince1970 * 1000)
-                        let inSyncSongPositionInSec = (songPositionInMillis + (currentTimeInMillis - hostTimeInMillis + 1000)) / 1000
-                        
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            player.currentPlaybackTime = inSyncSongPositionInSec + self.playingDelay
                         }
                     }
                 })

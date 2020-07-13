@@ -234,10 +234,12 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
                 let songName: String = nowPlaying!.value(forProperty: MPMediaItemPropertyTitle) as! String
                 let artistName: String = nowPlaying!.value(forProperty: MPMediaItemPropertyArtist) as! String
                 let songDurationInSec: Double = (nowPlaying!.value(forKey: MPMediaItemPropertyPlaybackDuration) as! Double).truncate(places: 0)
-                let songPositionInMillis = player.currentPlaybackTime * 1000
+                var songPositionInMillis = player.currentPlaybackTime
+                var currentTimeMillis = NSDate().timeIntervalSince1970
+                songPositionInMillis = songPositionInMillis * 1000
+                currentTimeMillis = currentTimeMillis * 1000
                 let explicit: Bool = nowPlaying!.isExplicitItem
                 let songIsPlaying = !(player.playbackState == .paused)
-                let currentTimeMillis = NSDate().timeIntervalSince1970 * 1000
                 
                 self.sendData((String(
                     "song name:\(songName)\n" +

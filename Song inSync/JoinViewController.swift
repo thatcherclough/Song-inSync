@@ -28,6 +28,9 @@ class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDe
         super.viewDidLoad()
         
         setUpTable()
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(appCameToForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
     }
     
     func setUpTable() {
@@ -37,6 +40,17 @@ class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDe
         tableView.layoutMargins = UIEdgeInsets.zero
         tableView.separatorInset = UIEdgeInsets.zero
         tableView.reloadData()
+    }
+    
+    @objc func appMovedToBackground() {
+        mcBrowser.stopBrowsingForPeers()
+        hosts.removeAll()
+        
+        tableView.reloadData()
+    }
+    
+    @objc func appCameToForeground() {
+        mcBrowser.startBrowsingForPeers()
     }
     
     override func viewDidAppear(_ animated: Bool) {
