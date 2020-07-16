@@ -15,14 +15,16 @@ import StoreKit
 
 class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, MCNearbyServiceBrowserDelegate, MCSessionDelegate {
     
-    var peerID: MCPeerID!
-    var mcSession: MCSession!
-    var mcBrowser: MCNearbyServiceBrowser!
+    static var peerID: MCPeerID!
+    static var mcSession: MCSession!
+    static var mcBrowser: MCNearbyServiceBrowser!
     
     var hosts: [MCPeerID] = []
     var requestedHost: MCPeerID = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
     var declinedHost: MCPeerID = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
     var connectingHost: MCPeerID = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
+    
+    var alreadySetUpMC: Bool! = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,54 +45,59 @@ class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDe
     }
     
     @objc func appMovedToBackground() {
-        mcBrowser.stopBrowsingForPeers()
+        JoinViewController.mcBrowser.stopBrowsingForPeers()
         hosts.removeAll()
         
         tableView.reloadData()
     }
     
     @objc func appCameToForeground() {
-        mcBrowser.startBrowsingForPeers()
+        JoinViewController.mcBrowser.startBrowsingForPeers()
+        
+        tableView.reloadData()
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        setUpMC()
+        if !alreadySetUpMC {
+            setUpMC()
+            alreadySetUpMC = true
+        }
+        JoinViewController.mcBrowser.startBrowsingForPeers()
     }
     
     func setUpMC() {
-        DispatchQueue.global(qos: .background).async {
-            self.peerID = MCPeerID(displayName: UIDevice.current.name)
-            self.mcSession = MCSession(peer: self.peerID, securityIdentity: nil, encryptionPreference: .required)
-            self.mcSession.delegate = self
-            
-            self.mcBrowser = MCNearbyServiceBrowser(peer: self.peerID, serviceType: "Song-inSync")
-            self.mcBrowser.delegate = self
-            self.mcBrowser.startBrowsingForPeers()
-        }
-    }
-    
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        let joined = segue.destination as! JoinedViewController
-        joined.mcSession = self.mcSession
-        joined.peerID = self.peerID
-        joined.connectedHost = self.connectingHost
+        JoinViewController.peerID = MCPeerID(displayName: UIDevice.current.name)
+        JoinViewController.mcSession = MCSession(peer: JoinViewController.peerID, securityIdentity: nil, encryptionPreference: .required)
+        JoinViewController.mcSession.delegate = self
         
-        self.declinedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
-        self.requestedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
-        self.connectingHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
+        JoinViewController.mcBrowser = MCNearbyServiceBrowser(peer: JoinViewController.peerID, serviceType: "Song-inSync")
+        JoinViewController.mcBrowser.delegate = self
     }
     
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
-        mcBrowser.stopBrowsingForPeers()
+        JoinViewController.mcBrowser.stopBrowsingForPeers()
         hosts.removeAll()
+        declinedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
+        requestedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
+        connectingHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
         
         tableView.reloadData()
     }
     
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let joined = segue.destination as! JoinedViewController
+        joined.peerID = JoinViewController.peerID
+        joined.mcSession = JoinViewController.mcSession
+        joined.connectedHost = self.connectingHost
+        
+        declinedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
+        requestedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
+        connectingHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
+    }
     
     // MARK: Table related
     
@@ -141,7 +148,7 @@ class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDe
                 self.declinedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
                 self.requestedHost = self.hosts[indexPath.row]
                 self.tableView.reloadData()
-                self.mcBrowser.invitePeer(self.hosts[indexPath.row], to: self.mcSession, withContext: nil, timeout: 300.0)
+                JoinViewController.mcBrowser.invitePeer(self.hosts[indexPath.row], to: JoinViewController.mcSession, withContext: nil, timeout: 300.0)
             }
         }
     }
@@ -151,15 +158,18 @@ class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDe
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         if state == MCSessionState.connected {
             print("Peer: connected to: \(peerID.displayName)")
+            
             DispatchQueue.main.async {
                 self.performSegue(withIdentifier: "ToJoinedView", sender: nil)
             }
         } else if state == MCSessionState.connecting {
             print("Peer: connecting to: \(peerID.displayName)")
+            
             requestedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
             connectingHost = peerID
         } else if state == MCSessionState.notConnected {
             print("Peer: disconnected from: \(peerID.displayName)")
+            
             requestedHost = MCPeerID(displayName: "Song-inSyncDefaultPeerID")
             declinedHost = peerID
         }
@@ -174,7 +184,7 @@ class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDe
     }
     
     func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
-        if !hosts.contains(peerID) && !(self.peerID == peerID) {
+        if !hosts.contains(peerID) && !(JoinViewController.peerID == peerID) {
             hosts.append(peerID)
         }
         tableView.reloadData()

@@ -13,25 +13,23 @@ import MediaPlayer
 import AVFoundation
 import StoreKit
 
-class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAdvertiserDelegate, UITableViewDataSource, UITableViewDelegate {
+class HostViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, MCSessionDelegate, MCNearbyServiceAdvertiserDelegate {
     
-    var peerID: MCPeerID!
-    var mcSession: MCSession!
-    var mcAdvertiser: MCNearbyServiceAdvertiser!
+    static var peerID: MCPeerID!
+    static var mcSession: MCSession!
+    static var mcAdvertiser: MCNearbyServiceAdvertiser!
     
     var peers: [MCPeerID] = []
     var connectingPeers: [MCPeerID] = []
     var toBeAccepted: [MCPeerID] = []
     var toBeDeclined: [MCPeerID] = []
     
+    var alreadySetUpMC: Bool! = false
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setUpTable()
-        
-        setUpMC()
-        
-        startSendingMusicData()
         
         NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appCameToForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -46,43 +44,53 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
         tableView.reloadData()
     }
     
-    func setUpMC() {
-        DispatchQueue.global(qos: .background).async {
-            self.peerID = MCPeerID(displayName: UIDevice.current.name)
-            self.mcSession = MCSession(peer: self.peerID, securityIdentity: nil, encryptionPreference: .required)
-            self.mcSession.delegate = self
-            
-            self.mcAdvertiser = MCNearbyServiceAdvertiser(peer: self.peerID, discoveryInfo: nil, serviceType: "Song-inSync")
-            self.mcAdvertiser.delegate = self
-            self.mcAdvertiser.stopAdvertisingPeer()
-            
-            self.mcAdvertiser.startAdvertisingPeer()
-        }
-    }
-    
     @objc func appMovedToBackground() {
-        mcAdvertiser.stopAdvertisingPeer()
+        HostViewController.mcAdvertiser.stopAdvertisingPeer()
     }
     
     @objc func appCameToForeground() {
-        mcAdvertiser.startAdvertisingPeer()
+        HostViewController.mcAdvertiser.startAdvertisingPeer()
     }
     
-    func applicationWillTerminate(_ application: UIApplication) {
-        mcAdvertiser.stopAdvertisingPeer()
+    override func viewDidAppear(_ animated: Bool) {
+        if !alreadySetUpMC {
+            setUpMC()
+            alreadySetUpMC = true
+        }
+        HostViewController.mcAdvertiser.stopAdvertisingPeer()
+        HostViewController.mcAdvertiser.startAdvertisingPeer()
+        
+        startSendingMusicData()
+    }
+    
+    func setUpMC() {
+        HostViewController.peerID = MCPeerID(displayName: UIDevice.current.name)
+        HostViewController.mcSession = MCSession(peer: HostViewController.peerID, securityIdentity: nil, encryptionPreference: .required)
+        HostViewController.mcSession.delegate = self
+        
+        HostViewController.mcAdvertiser = MCNearbyServiceAdvertiser(peer: HostViewController.peerID, discoveryInfo: nil, serviceType: "Song-inSync")
+        HostViewController.mcAdvertiser.delegate = self
     }
     
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
-        mcAdvertiser.stopAdvertisingPeer()
-        mcSession.disconnect()
+        if timer != nil {
+            timer.invalidate()
+        }
+        
+        HostViewController.mcAdvertiser.stopAdvertisingPeer()
+        HostViewController.mcSession.disconnect()
         peers.removeAll()
         connectingPeers.removeAll()
         toBeAccepted.removeAll()
         toBeDeclined.removeAll()
         
         tableView.reloadData()
+    }
+    
+    func applicationWillTerminate(_ application: UIApplication) {
+        HostViewController.mcAdvertiser.stopAdvertisingPeer()
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -98,7 +106,7 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        if mcSession.connectedPeers.contains(peers[indexPath.row]) {
+        if HostViewController.mcSession.connectedPeers.contains(peers[indexPath.row]) {
             let cell = tableView.dequeueReusableCell(withIdentifier: "AcceptedCell", for: indexPath) as! AcceptedCell
             cell.label.text = peers[indexPath.row].displayName
             cell.connectionStatusLabel.text = "Connected"
@@ -120,11 +128,12 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
             let cell = tableView.dequeueReusableCell(withIdentifier: "RequestedCell", for: indexPath) as! RequestedCell
             cell.label.text = peers[indexPath.row].displayName
             
-            cell.acceptButton.addTarget(self, action: #selector(accept(sender:)), for: .touchUpInside)
             cell.acceptButton.layer.cornerRadius = 6
+            cell.acceptButton.addTarget(self, action: #selector(accept(sender:)), for: .touchUpInside)
             cell.acceptButton.tag = indexPath.row
-            cell.declineButton.addTarget(self, action: #selector(decline(sender:)), for: .touchUpInside)
+            
             cell.declineButton.layer.cornerRadius = 6
+            cell.declineButton.addTarget(self, action: #selector(decline(sender:)), for: .touchUpInside)
             cell.declineButton.tag = indexPath.row
             
             if self.traitCollection.userInterfaceStyle == .dark {
@@ -143,16 +152,16 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
     }
     
     @objc func accept(sender: UIButton) {
-        let buttonTag = sender.tag
-        connectingPeers.append(peers[buttonTag])
-        toBeAccepted.append(peers[buttonTag])
+        let index = sender.tag
+        connectingPeers.append(peers[index])
+        toBeAccepted.append(peers[index])
         tableView.reloadData()
     }
     
     @objc func decline(sender: UIButton){
-        let buttonTag = sender.tag
-        toBeDeclined.append(peers[buttonTag])
-        peers.remove(at: buttonTag)
+        let index = sender.tag
+        toBeDeclined.append(peers[index])
+        peers.remove(at: index)
         tableView.reloadData()
     }
     
@@ -191,11 +200,11 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
             while true {
                 if self.toBeAccepted.count > 0 && self.toBeAccepted.contains(peerID) {
                     self.toBeAccepted.remove(at: self.toBeAccepted.firstIndex(of: peerID)!)
-                    invitationHandler(true, self.mcSession)
+                    invitationHandler(true, HostViewController.mcSession)
                     break;
                 } else if self.toBeDeclined.count > 0 && self.toBeDeclined.contains(peerID) {
                     self.toBeDeclined.remove(at: self.toBeDeclined.firstIndex(of: peerID)!)
-                    invitationHandler(false, self.mcSession)
+                    invitationHandler(false, HostViewController.mcSession)
                     break;
                 }
             }
@@ -207,6 +216,7 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
     }
     
     var audioPlayer: AVAudioPlayer?
+    var timer: Timer!
     func startSendingMusicData() {
         do {
             let audioCheck = URL(fileURLWithPath: Bundle.main.path(forResource: "audioCheck", ofType: "mp3")!)
@@ -226,7 +236,7 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
         backgroundTask = UIApplication.shared.beginBackgroundTask(expirationHandler: {
             UIApplication.shared.endBackgroundTask(backgroundTask)
         })
-        let timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { (t) in
+        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { (t) in
             let player = MPMusicPlayerController.systemMusicPlayer
             let nowPlaying = player.nowPlayingItem
             
@@ -256,9 +266,9 @@ class HostViewController: UIViewController, MCSessionDelegate, MCNearbyServiceAd
     }
     
     func sendData(_ data:Data) {
-        if mcSession.connectedPeers.count > 0 {
+        if HostViewController.mcSession.connectedPeers.count > 0 {
             do {
-                try mcSession.send(data, toPeers: mcSession.connectedPeers, with: .reliable)
+                try HostViewController.mcSession.send(data, toPeers: HostViewController.mcSession.connectedPeers, with: .reliable)
             } catch let error {
                 DispatchQueue.main.async {
                     let errorAlert = UIAlertController(title: "Error", message: "Could not send music data to peers: \(error.localizedDescription)", preferredStyle: UIAlertController.Style.alert)

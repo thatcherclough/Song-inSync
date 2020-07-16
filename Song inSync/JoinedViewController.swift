@@ -17,8 +17,8 @@ import Keys
 
 class JoinedViewController: UIViewController, MCSessionDelegate {
     
-    var mcSession: MCSession!
     var peerID: MCPeerID!
+    var mcSession: MCSession!
     var connectedHost: MCPeerID!
     
     var countryCode: String!
@@ -37,6 +37,7 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
     @objc func applicationBecameUnlocked(notification: NSNotification) {
         playingDelay = 0.3
     }
+    
     @objc func applicationBecameLocked(notification: NSNotification) {
         playingDelay = 0.6
     }
@@ -90,24 +91,23 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
     
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         if state == MCSessionState.connected {
-            print("Peer: cconnected to: \(peerID.displayName)")
+            print("Peer: connected to: \(peerID.displayName)")
         } else if state == MCSessionState.connecting {
             print("Peer: connecting to: \(peerID.displayName)")
         } else if state == MCSessionState.notConnected {
-            print("Peer: ddisconected from: \(peerID.displayName)")
+            print("Peer: disconected from: \(peerID.displayName)")
+            
             if (self.peerID == peerID) || (connectedHost == peerID) {
+                if MainViewController.canPushNotifications {
+                    MainViewController.pushNotification(title: "Disconnect occurred", body: "You have been disconnected from the host.")
+                }
                 DispatchQueue.main.async {
-                    if MainViewController.canPushNotifications {
-                        MainViewController.pushNotification(title: "Disconnect occurred", body: "You have been disconnected from the host.")
-                    }
-                    DispatchQueue.main.async {
-                        let errorAlert = UIAlertController(title: "Notice", message: "You have been disconnected from the host. Will now return to the main menu.", preferredStyle: UIAlertController.Style.alert)
-                        errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: {(action: UIAlertAction!) in
-                            errorAlert.dismiss(animated: true, completion: nil)
-                            self.navigationController?.popToRootViewController(animated: true)
-                        }))
-                        self.present(errorAlert, animated: true, completion: nil)
-                    }
+                    let errorAlert = UIAlertController(title: "Notice", message: "You have been disconnected from the host. Will now return to the main menu.", preferredStyle: UIAlertController.Style.alert)
+                    errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: {(action: UIAlertAction!) in
+                        errorAlert.dismiss(animated: true, completion: nil)
+                        self.navigationController?.popToRootViewController(animated: true)
+                    }))
+                    self.present(errorAlert, animated: true, completion: nil)
                 }
             }
         }
@@ -120,6 +120,7 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
     var currentSongAndArtist: String = ""
     var currentSongIsPlaying: Bool = false
     var playingDelay: Double = 0.3
+    var songAvailable: Bool! = true
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         DispatchQueue.main.async {
             let dataAsString = String(data: data, encoding: .utf8)!
@@ -138,7 +139,9 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
             let currentSongPositionInSec = player.currentPlaybackTime
             let hostSongPositionForCheckInSec = (songPositionInMillis / 1000) + (NSDate().timeIntervalSince1970 - (hostTimeInMillis / 1000))
             
-            if !self.currentSongAndArtist.isEmpty && (self.currentSongAndArtist == songAndArtist) && (abs(hostSongPositionForCheckInSec - currentSongPositionInSec) < 0.025) {
+            if !self.songAvailable && (self.currentSongAndArtist == songAndArtist) {
+                print("Song not available")
+            } else if !self.currentSongAndArtist.isEmpty && (self.currentSongAndArtist == songAndArtist) && (abs(hostSongPositionForCheckInSec - currentSongPositionInSec) < 0.03) {
                 print("Everything is on track")
             } else if (!self.currentSongAndArtist.isEmpty) && (self.currentSongAndArtist == songAndArtist) {
                 print("Song is the same, but something else has changed")
@@ -165,6 +168,10 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
                 
                 self.getAppleMusicSongID(songName: songName, artistName: artistName, songDurationInSec: songDurationInSec, explicit: explicit, completion: { id in
                     if let id = id {
+                        if !self.songAvailable {
+                            self.songAvailable = true
+                        }
+                        
                         let id: [String] = [id]
                         let queue  = MPMusicPlayerStoreQueueDescriptor(storeIDs: id)
                         player.setQueue(with: queue)
@@ -183,23 +190,35 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
                         } else {
                             player.pause()
                         }
+                    } else {
+                        self.songAvailable = false
+                        
+                        player.pause()
+                        
+                        if MainViewController.canPushNotifications {
+                            MainViewController.pushNotification(title: "Song not available", body: "The host is playing a song that is not available on Apple Music.")
+                        }
+                        DispatchQueue.main.async {
+                            let errorAlert = UIAlertController(title: "Notice", message: "The host is playing a song that is not available on Apple Music.", preferredStyle: UIAlertController.Style.alert)
+                            errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
+                            self.present(errorAlert, animated: true, completion: nil)
+                        }
                     }
                 })
             }
         }
     }
     
-    private let keys = SongInSyncKeys()
-    
+    let keys = SongInSyncKeys()
     func getAppleMusicSongID(songName: String, artistName: String, songDurationInSec: Double, explicit: Bool, completion: @escaping (String?)->()) {
         let searchTerm  = ("\(songName)+\(artistName)").replacingOccurrences(of: " ", with: "+")
         var components = URLComponents()
         components.scheme = "https"
-        components.host   = "api.music.apple.com"
-        components.path   = "/v1/catalog/\(self.countryCode ?? "us")/search"
+        components.host = "api.music.apple.com"
+        components.path = "/v1/catalog/\(self.countryCode ?? "us")/search"
         components.queryItems = [
             URLQueryItem(name: "term", value: searchTerm),
-            URLQueryItem(name: "limit", value: "10"),
+            URLQueryItem(name: "limit", value: "25"),
             URLQueryItem(name: "types", value: "songs"),
         ]
         let url = components.url!
@@ -208,7 +227,6 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(self.keys.appleMusicAPIKey)", forHTTPHeaderField: "Authorization")
         
-        var id: String!
         let task = session.dataTask(with: request as URLRequest, completionHandler: { data, response, error in
             guard error == nil else {
                 DispatchQueue.main.async {
@@ -244,11 +262,12 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
                                             guard let playParams = attributes["playParams"] as? [String: Any] else {
                                                 continue
                                             }
-                                            id = playParams["id"] as? String
+                                            let id = playParams["id"] as? String
                                             return completion(id)
                                         }
                                     }
                                 }
+                                return completion(nil)
                             }
                         }
                     }
@@ -283,7 +302,7 @@ extension String {
 }
 
 extension Double{
-    func truncate(places : Int)-> Double{
+    func truncate(places: Int)-> Double{
         return Double(floor(pow(10.0, Double(places)) * self)/pow(10.0, Double(places)))
     }
     
