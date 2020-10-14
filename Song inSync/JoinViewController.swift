@@ -153,7 +153,7 @@ class JoinViewController: UIViewController, UITableViewDataSource, UITableViewDe
         }
     }
     
-    // MARK: Multipeer conectivity related
+    // MARK: Multipeer connectivity related
     
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         if state == MCSessionState.connected {
