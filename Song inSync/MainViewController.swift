@@ -32,20 +32,20 @@ class MainViewController: UIViewController {
         SKCloudServiceController.requestAuthorization { status in
             if SKCloudServiceController.authorizationStatus() == .authorized {
                 controller.requestCapabilities { capabilities, error in
-//                    if capabilities.contains(.musicCatalogPlayback) {
+                    if capabilities.contains(.musicCatalogPlayback) {
                         self.hasPermissions = true
-//                        UNUserNotificationCenter.current()
-//                            .requestAuthorization(options: [.alert, .sound, .badge]) {
-//                                granted, error in
-//                                MainViewController.canPushNotifications = granted
-//                        }
-//                    } else {
-//                        DispatchQueue.main.async {
-//                            let errorAlert = UIAlertController(title: "Notice", message: "Song inSync will not work on this device because this device does not have Apple Music.", preferredStyle: UIAlertController.Style.alert)
-//                            errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
-//                            self.present(errorAlert, animated: true, completion: nil)
-//                        }
-//                    }
+                        UNUserNotificationCenter.current()
+                            .requestAuthorization(options: [.alert, .sound, .badge]) {
+                                granted, error in
+                                MainViewController.canPushNotifications = granted
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            let errorAlert = UIAlertController(title: "Notice", message: "Song inSync will not work on this device because this device does not have Apple Music.", preferredStyle: UIAlertController.Style.alert)
+                            errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
+                            self.present(errorAlert, animated: true, completion: nil)
+                        }
+                    }
                 }
             } else {
                 DispatchQueue.main.async {
