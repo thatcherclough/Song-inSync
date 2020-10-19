@@ -25,4 +25,4 @@ Song inSync can be installed from the [App Store](https://apps.apple.com/us/app/
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
 
-Copyright 2020 © ThatcherDev.
+Copyright 2020 © Thatcher Clough.

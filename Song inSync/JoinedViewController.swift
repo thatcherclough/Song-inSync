@@ -48,7 +48,7 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
             controller.requestStorefrontCountryCode { countryCode, error in
                 if error != nil {
                     DispatchQueue.main.async {
-                        let errorAlert = UIAlertController(title: "Error", message: "Could not get the current contry code. Will use \"us\" as default.", preferredStyle: UIAlertController.Style.alert)
+                        let errorAlert = UIAlertController(title: "Error", message: "Could not get the current country code. Will use \"us\" as default.", preferredStyle: UIAlertController.Style.alert)
                         errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
                         self.present(errorAlert, animated: true, completion: nil)
                     }
@@ -87,7 +87,7 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
         mcSession.disconnect()
     }
     
-    // MARK: Multipeer conectivity related
+    // MARK: Multipeer connectivity related
     
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         if state == MCSessionState.connected {
@@ -95,7 +95,7 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
         } else if state == MCSessionState.connecting {
             print("Peer: connecting to: \(peerID.displayName)")
         } else if state == MCSessionState.notConnected {
-            print("Peer: disconected from: \(peerID.displayName)")
+            print("Peer: disconnected from: \(peerID.displayName)")
             
             if (self.peerID == peerID) || (connectedHost == peerID) {
                 if MainViewController.canPushNotifications {
@@ -230,7 +230,7 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
         let task = session.dataTask(with: request as URLRequest, completionHandler: { data, response, error in
             guard error == nil else {
                 DispatchQueue.main.async {
-                    let errorAlert = UIAlertController(title: "Error", message: "Could not retreive data from Apple Music: \(error!.localizedDescription)", preferredStyle: UIAlertController.Style.alert)
+                    let errorAlert = UIAlertController(title: "Error", message: "Could not retrieve data from Apple Music: \(error!.localizedDescription)", preferredStyle: UIAlertController.Style.alert)
                     errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
                     self.present(errorAlert, animated: true, completion: nil)
                 }
@@ -238,7 +238,7 @@ class JoinedViewController: UIViewController, MCSessionDelegate {
             }
             guard let data = data else {
                 DispatchQueue.main.async {
-                    let errorAlert = UIAlertController(title: "Error", message: "Could not retreive data from Apple Music.", preferredStyle: UIAlertController.Style.alert)
+                    let errorAlert = UIAlertController(title: "Error", message: "Could not retrieve data from Apple Music.", preferredStyle: UIAlertController.Style.alert)
                     errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
                     self.present(errorAlert, animated: true, completion: nil)
                 }

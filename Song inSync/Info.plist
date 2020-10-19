@@ -22,6 +22,13 @@
 	<true/>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Song inSync uses Apple Music to get the current playing song as well as play this song on other devices.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Song inSync used multipeer connectivity to communiacate with other iPhones.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_Song-inSync._tcp</string>
+        <string>_Song-inSync._udp</string>
+    </array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

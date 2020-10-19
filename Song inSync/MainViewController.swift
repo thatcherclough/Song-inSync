@@ -41,7 +41,7 @@ class MainViewController: UIViewController {
                         }
                     } else {
                         DispatchQueue.main.async {
-                            let errorAlert = UIAlertController(title: "Notice", message: "Song inSync will not work on this deivce beucase this device does not have Apple Music.", preferredStyle: UIAlertController.Style.alert)
+                            let errorAlert = UIAlertController(title: "Notice", message: "Song inSync will not work on this device because this device does not have Apple Music.", preferredStyle: UIAlertController.Style.alert)
                             errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
                             self.present(errorAlert, animated: true, completion: nil)
                         }
@@ -49,7 +49,7 @@ class MainViewController: UIViewController {
                 }
             } else {
                 DispatchQueue.main.async {
-                    let errorAlert = UIAlertController(title: "Notice", message: "Song inSync will not work on this deivce beucase it does not have access to Apple Music. Please enable access to \"Media and Apple Music\" in settings.", preferredStyle: UIAlertController.Style.alert)
+                    let errorAlert = UIAlertController(title: "Notice", message: "Song inSync will not work on this deivce because it does not have access to Apple Music. Please enable access to \"Media and Apple Music\" in settings.", preferredStyle: UIAlertController.Style.alert)
                     errorAlert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
                     self.present(errorAlert, animated: true, completion: nil)
                 }

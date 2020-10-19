@@ -165,7 +165,7 @@ class HostViewController: UIViewController, UITableViewDataSource, UITableViewDe
         tableView.reloadData()
     }
     
-    // MARK: Multipeer conectivity related
+    // MARK: Multipeer connectivity related
     
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         if state == MCSessionState.connected {
@@ -175,7 +175,7 @@ class HostViewController: UIViewController, UITableViewDataSource, UITableViewDe
             
             connectingPeers.append(peerID)
         } else if state == MCSessionState.notConnected {
-            print("Host: disconected from: \(peerID.displayName)")
+            print("Host: disconnected from: \(peerID.displayName)")
             if MainViewController.canPushNotifications {
                 MainViewController.pushNotification(title: "Disconnect occurred", body: "\(peerID.displayName) has been disconnected.")
             }
