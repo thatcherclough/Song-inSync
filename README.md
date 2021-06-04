@@ -1,6 +1,9 @@
 # Song inSync
 Song inSync is an iOS app that lets you to play the same song at the same time across multiple devices.
 
+## Disclaimer
+After extensive testing, Song inSync does not work well, and becuase of this is has been taken off of the App Store.
+
 ## Screenshots
 Home|Hosting|Joined
 :-------------------------:|:-------------------------:|:-------------------------:
@@ -20,7 +23,7 @@ Instruction for obtains this key can be found [here](https://developer.apple.com
 In addition to following those instructions, I also used [this python program](https://github.com/pelauimagineering/apple-music-token-generator) to generate the key after gathering the necessary information. 
 
 ## Installation
-Song inSync can be installed from the [App Store](https://apps.apple.com/us/app/song-insync/id1522047990).
+Due to the fact that Song inSync does not work well, it has been taken off of the App Store. However, it can be installed manually using Xcode. (Note: An Apple Music API key is needed for it to run properly.) 
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
